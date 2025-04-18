@@ -83,29 +83,6 @@ export async function readJSON(fileName: string): Promise<any> {
     if (extension === '.gz') {
         // Delegate `.gz` file handling to the sub-function
         return JSON.parse(await readGZFile(fileName));
-        let fileContent: string = '';
-        //(async () => {
-        //    fileContent = await readGZFile(fileName);
-        //})().then(() => {
-            //console.log('readGZFile fileContent', fileContent);
-        //    return JSON.parse(fileContent);
-        //});
-        //return new Promise((resolve) => {
-        //    readGZFile(fileName)
-        //        .then((fileContent) => {
-        //            resolve(JSON.parse(fileContent));
-        //        })
-        //        .catch((err) => {
-        //            console.error('Error reading GZ file:', err);
-        //            throw err;
-        //        });
-        //});
-        //const awaiting = temp(fileName);
-        //awaiting.then((fileContent) => {
-        //    console.log('readGZFile fileContent', fileContent);
-        //    return JSON.parse(fileContent);
-        //});
-        //return temp(fileName);
     } else if (extension === '.json') {
         // Handle standard JSON files
         return JSON.parse(fs.readFileSync(fileName, 'utf-8'));

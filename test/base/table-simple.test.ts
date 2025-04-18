@@ -39,23 +39,23 @@ describe('Table', () => {
         
     });
     it('should set name and json file - intialize method', () => {
-        const filePath = path.join(__dirname, '../data/region-23-08m-db.json');
+        const filePath = path.join(__dirname, '../data/car-road-tests.json');
         (async () => {
             const tbl2 = new TableCore();
             await tbl2.intialize({
                 name: 'table1', fileName: filePath
             });
-            expect(tbl2.columns.length).to.equal(4);
+            expect(tbl2.columns.length).to.equal(12);
         })();
     });
     it('should set name and compressed json file (.gz) - initialize method', () => {
-        const filePath = path.join(__dirname, '../data/region-23-08m-db.json.gz');
+        const filePath = path.join(__dirname, '../data/house-prices.json.gz');
         (async () => {
             const tbl2 = new TableCore();
             await tbl2.intialize({
                 name: 'table1', fileName: filePath
             });
-            expect(tbl2.columns.length).to.equal(4);
+            expect(tbl2.columns.length).to.equal(13);
         })();
 
     });
