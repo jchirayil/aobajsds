@@ -40,6 +40,12 @@ interface TableOptions {
     rawData?: any;
 }
 
+interface ViewOptions {
+    name?: string | number;
+    includeRowId?: boolean;
+    useAlias?: boolean;
+}
+
 export class TableCore {
     private _name: string = 'table1';
     private _data: TableData;
@@ -63,13 +69,10 @@ export class TableCore {
             this._name = options.name;
         }
         if (options.fileName) {
-            //console.log('Loading data from file: ', options.fileName);
             (async () => {
                 if (options.fileName) {
                     const data = await readJSON(options.fileName);
-                    //console.log('Loaded data length: ', data.length);
                     this.parseData(data);
-                    //console.log('After parsing: ', this._data);
                 }
             })();
         } else if (options.rawData) {
@@ -127,25 +130,124 @@ export class TableCore {
         return null;
     }
 
-    columns(viewCols?: number[]): ColumnDefinition[] {
-        const columns: ColumnDefinition[] = [];
-        if (viewCols) {
-            viewCols.forEach((colId) => {
-                const def = this.column(colId);
-                if (def) columns.push(def);
+    columns(options: ViewOptions = { name: 'default' }): ColumnDefinition[] {
+        return this.getColumns(options);
+    }
+
+    rows(options: ViewOptions = { name: 'default', includeRowId: false, useAlias: false }): { [key: string]: any }[] {
+        return this.getRows(options);
+    }
+
+    sortRows(rowIds: number[], sortColumns: SortColumn[]): number[] {
+        const sortableRows = rowIds.map((id) => ({ _rowId: id, data: this._data[id] }));
+        sortableRows.sort((a, b) => {
+            for (const col of sortColumns) {
+                const comparison = this.compareValues(a.data[col.id], b.data[col.id], col.dir);
+                if (comparison !== 0) {
+                    return comparison;
+                }
+            }
+            return 0;
+        });
+        return sortableRows.map((row) => row._rowId);
+    }
+
+    views(): Views {
+        return { ...this._views };
+    }
+
+    get view(): string | number {
+        return this._view;
+    }
+
+    set view(view: string | number) {
+        if (this._views._ids.hasOwnProperty(view)) {
+            this._view = view;
+        } else {
+            throw new Error(`View ${view} does not exist.`);
+        }
+    }
+
+    protected getRow(
+        id: number,
+        columns: ColumnDefinition[],
+        options: { includeRowId?: boolean; useAlias?: boolean } = {}
+    ): { [key: string]: any } {
+        const row: { [key: string]: any } = options.includeRowId ? { _rowId: id } : {};
+        columns.forEach((col) => {
+            const key = options.useAlias && col.alias ? col.alias : String(col.id);
+            row[key] = this._data[id]?.[col.id];
+        });
+        return row;
+    }
+
+    protected getRows(
+        options: ViewOptions = {
+            name: 'default',
+            includeRowId: false,
+            useAlias: false,
+        }
+    ): { [key: string]: any }[] {
+        const _cols = this.getColumns(options);
+        const _rows: { [key: string]: any }[] = [];
+        const _rIds = this._views.hasOwnProperty(options.name || 'default')
+            ? this._views[options.name || 'default'].rows
+            : Object.keys(this._data).map(Number); // Convert keys to numbers
+
+        for (const key of _rIds) {
+            _rows.push(this.getRow(Number(key), _cols, options));
+        }
+        return _rows;
+    }
+
+    protected getColumns(options: ViewOptions = { name: 'default' }): ColumnDefinition[] {
+        const _cols: ColumnDefinition[] = [];
+        const _view = this.getViewByNameOrId(options.name || 'default');
+
+        if (_view && _view.hasOwnProperty('cols')) {
+            _view.cols?.forEach((col) => {
+                const column = this.getColumn(col);
+                if (column) {
+                    _cols.push(column);
+                }
             });
         } else {
-            for (const colName in this._cols) {
-                if (colName !== '_ids') {
-                    const def = this.column(colName);
-                    if (def) columns.push(def);
+            for (const col of Object.keys(this._cols)) {
+                if (col !== '_ids') {
+                    const column = this.getColumn(col);
+                    if (column) {
+                        _cols.push(column);
+                    }
                 }
             }
         }
-        return columns;
+
+        return _cols;
     }
 
-    getSortColumns(columns: string[] | { [columnName: string]: 1 | -1 } | string | number): SortColumn[] {
+    protected getColumn(column: string | number): ColumnDefinition | null {
+        let _col: ColumnDefinition | null = null;
+
+        if (this._cols.hasOwnProperty(column)) {
+            const _c = this._cols[column];
+            if (typeof _c === 'string') {
+                // Recursively get the column if it's a string alias
+                _col = this.getColumn(_c);
+            } else {
+                // Clone the column definition and set the alias
+                _col = JSON.parse(JSON.stringify(_c)) as ColumnDefinition;
+                _col.alias = column as string;
+            }
+        } else if (this._cols._ids.hasOwnProperty(column) && typeof column === 'number') {
+            // Handle case where column is in _ids
+            const _c = this._cols._ids[Number(column)];
+            _col = this.getColumn(_c);
+        }
+
+        return _col;
+    }
+
+    protected getSortColumns(columns: string[] | { [columnName: string]: 1 | -1 } | string | number): SortColumn[] {
         const sortCols: SortColumn[] = [];
         const processColumn = (col: string | number, dir: 1 | -1 = 1) => {
             const def = this.column(col);
@@ -185,48 +287,6 @@ export class TableCore {
         return sortCols;
     }
 
-    row(id: number, columns: ColumnDefinition[], useAlias: boolean = false): { [key: string]: any } {
-        const row: { [key: string]: any } = {};
-        columns.forEach((col) => {
-            const key = useAlias && col.alias ? col.alias : String(col.id);
-            row[key] = this._data[id]?.[col.id];
-        });
-        return row;
-    }
-
-    rows(rowIds: number[], columns: ColumnDefinition[], useAlias: boolean = false): { [key: string]: any }[] {
-        return rowIds.map((id) => this.row(id, columns, useAlias));
-    }
-
-    sortRows(rowIds: number[], sortColumns: SortColumn[]): number[] {
-        const sortableRows = rowIds.map((id) => ({ _rowId: id, data: this._data[id] }));
-        sortableRows.sort((a, b) => {
-            for (const col of sortColumns) {
-                const comparison = this.compareValues(a.data[col.id], b.data[col.id], col.dir);
-                if (comparison !== 0) {
-                    return comparison;
-                }
-            }
-            return 0;
-        });
-        return sortableRows.map((row) => row._rowId);
-    }
-
-    views(): Views {
-        return { ...this._views };
-    }
-
-    get view(): string | number {
-        return this._view;
-    }
-    set view(view: string | number) {
-        if (this._views._ids.hasOwnProperty(view)) {
-            this._view = view;
-        } else {
-            throw new Error(`View ${view} does not exist.`);
-        }
-    }
-
     protected parseColumn(column: string | number): number {
         if (typeof column === 'string' && this._cols.hasOwnProperty(column)) {
             const col = this._cols[column];
@@ -246,11 +306,11 @@ export class TableCore {
     }
 
     protected parseRow(row: { [key: string]: any }): { [key: number]: any } {
-        const parsedRow: { [key: number]: any } = {};
+        const _row: { [key: number]: any } = {};
         for (const [col, val] of Object.entries(row)) {
-            parsedRow[this.parseColumn(col)] = val;
+            _row[this.parseColumn(col)] = val;
         }
-        return parsedRow;
+        return _row;
     }
 
     protected compareValues(value1: any, value2: any, direction: 1 | -1): number {

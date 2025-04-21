@@ -23,7 +23,7 @@ describe('Table', () => {
         tbl.name = 'table3';
         expect(tbl.name).to.equal('table3');
     });
-    it('should set name and data - intialize method', () => {
+    it('should set name and data - intialize method - default view', () => {
         
         (async () => {
             const tbl2 = new TableCore();
@@ -34,7 +34,10 @@ describe('Table', () => {
                     { id: 3, name: 'Ruth Mayers', organization: 'Acme Inc' }
                 ]
             });
+            const _rows = tbl2.rows();
             expect(tbl2.name).to.equal('table1');
+            expect(tbl2.view).to.equal('default');
+            expect(_rows.length).to.equal(3);
         })();
         
     });
@@ -59,4 +62,52 @@ describe('Table', () => {
         })();
 
     });
+    it('get rows - _rowId & column alias', () => {
+        
+        (async () => {
+            const tbl2 = new TableCore();
+            await tbl2.intialize({
+                name: 'table1', rawData: [
+                    { id: 1, name: 'John Smith', organization: 'Acme Inc' },
+                    { id: 2, name: 'Mary Jane', organization: 'Acme Inc' },
+                    { id: 3, name: 'Ruth Mayers', organization: 'Acme Inc' }
+                ]
+            });
+            const _rows = tbl2.rows({name:'default', includeRowId: true, useAlias: true});
+            expect(_rows.length).to.equal(3);
+            expect(_rows[0].hasOwnProperty('_rowId')).to.equal(true);
+            expect(_rows[0].hasOwnProperty('name')).to.equal(true);
+        })();
+        
+    });
+    it('get columns', () => {
+        (async () => {
+            const tbl2 = new TableCore();
+            await tbl2.intialize({
+                name: 'table1', rawData: [
+                    { id: 1, name: 'John Smith', organization: 'Acme Inc' },
+                    { id: 2, name: 'Mary Jane', organization: 'Acme Inc' },
+                    { id: 3, name: 'Ruth Mayers', organization: 'Acme Inc' }
+                ]
+            });
+            const _columns = tbl2.columns();
+            expect(_columns.length).to.equal(3);
+        })();
+    }
+    );
+    it('get views', () => {
+        (async () => {
+            const tbl2 = new TableCore();
+            await tbl2.intialize({
+                name: 'table1', rawData: [
+                    { id: 1, name: 'John Smith', organization: 'Acme Inc' },
+                    { id: 2, name: 'Mary Jane', organization: 'Acme Inc' },
+                    { id: 3, name: 'Ruth Mayers', organization: 'Acme Inc' }
+                ]
+            });
+            const _views = tbl2.views();
+            expect(_views.length).to.equal(1);
+        })();
+    }
+    );
 });
