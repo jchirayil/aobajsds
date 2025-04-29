@@ -97,12 +97,28 @@ AobaJSDS supports the following file types:
 
 ## Development
 
-Prerequisites
+### Prerequisites
 
 * Node.js (>=14.x)
 * TypeScript (>=4.x)
+* npm or yarn
 
-Build
+### Setup
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/jchirayil/aobajsds.git
+cd aobajsds
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+### Build
 
 To build the library, run:
 
@@ -110,7 +126,7 @@ To build the library, run:
 npm run build
 ```
 
-Tests
+### Run Tests
 
 To run the test suite, use:
 
@@ -140,3 +156,11 @@ The project is licensed under the MIT License. See the [LICENSE](LICENSE) file f
 ## Acknowledgements
 
 Special thanks to the contributors and open-source community for their support.
+
+* [JSZip](https://stuk.github.io/jszip) for compressed file handling.
+
+---
+
+## Contact
+
+For questions or support, please open an issue on the [GitHub respository](https://github.com/jchirayil/aobajsds/issues).
