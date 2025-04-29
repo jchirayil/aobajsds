@@ -110,4 +110,18 @@ describe('Table', () => {
         })();
     }
     );
+    it('sort rows', () => {
+        (async () => {
+            const tbl2 = new TableCore();
+            await tbl2.intialize({
+                name: 'table1', rawData: [
+                    { id: 1, name: 'Zoe Smith', organization: 'Acme Inc' },
+                    { id: 2, name: 'Yarn Jane', organization: 'Acme Inc' },
+                    { id: 3, name: 'Ver Mayers', organization: 'Acme Inc' }
+                ]
+            });
+            const _sort = tbl2.sort({columns:'name'});
+            expect(tbl2.views.length).to.equal(2);
+        })();
+    });
 });
