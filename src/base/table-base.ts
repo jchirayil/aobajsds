@@ -1,7 +1,18 @@
-import { ColumnDefinition, View, Views, Columns, ViewOptions, TableData, SortOptions } from './types';
-import { crc } from './utils';
+import {
+    ColumnDefinition,
+    View,
+    Views,
+    Columns,
+    ViewOptions,
+    TableData,
+    SortOptions,
+    FilterOptions,
+    Condition,
+    Query,
+} from './types';
+import { crc, isCondition, isConditionArray, isQuery, isQueryArray, typeofClause } from './utils';
 
-export class TableBase {
+export abstract class TableBase {
     protected _name: string = 'table1';
     protected _data: TableData;
     protected _cols: Columns;
@@ -231,6 +242,42 @@ export class TableBase {
         return _sortedRows;
     }
 
+    protected filterData(
+        options: FilterOptions = {
+            name: 'filter1',
+            query: { attribute: '', value: '', operator: 'eq' } as Condition,
+            setActive: true,
+        }
+    ): string | number {
+        const _clause = JSON.parse(JSON.stringify(options.query));
+        this.updateClause(_clause);
+        const _pid = crc(JSON.stringify(_clause));
+        const _filterViewName = options.name || _pid;
+
+        console.log('updateClause:', JSON.stringify(_clause));
+        console.log('pid:', _pid);
+        //const _filterView = this.getView(_filterViewName);
+
+        /*
+        if (_filterView === null) {
+            this._views[_filterViewName] = {
+                pid: _pid,
+                type: 'filter',
+                baseView: options.baseView || this._activeViewName || 'default',
+                clause: options.clause,
+                rows: this.filterRows(options.clause, options.baseView || this._activeViewName || 'default'),
+            };
+            this._views._ids[_pid] = _filterViewName;
+        }
+        if (options.setActive) {
+            this._activeViewName = _filterViewName;
+        }
+        */
+        return _filterViewName;
+    }
+
+    private filterRows() {}
+
     protected getView(nameOrId: string | number): View | null {
         let _view = null;
         if (this.views.hasOwnProperty(nameOrId) || this._views.hasOwnProperty(String(nameOrId))) {
@@ -307,5 +354,67 @@ export class TableBase {
         const v1 = value1 === undefined || value1 === null ? '' : value1;
         const v2 = value2 === undefined || value2 === null ? '' : value2;
         return (v1 < v2 ? -1 : v1 > v2 ? 1 : 0) * dir;
+    }
+
+    private updateClause(query: Query[] | Query | Condition | Condition[], sortColumns: ColumnDefinition[] = []) {
+        const addSortColumns = (column: ColumnDefinition) => {
+            if (!sortColumns.some((col) => col.id === column.id)) {
+                sortColumns.push(column);
+            }
+        };
+        const processCondition = (_condition: Condition) => {
+            if (Array.isArray(_condition.attribute)) {
+                for (let _i = 0; _i < _condition.attribute.length; _i++) {
+                    const _col = this.getColumn(_condition.attribute[_i]);
+                    if (_col) {
+                        _condition.attribute[_i] = _col.id;
+                        addSortColumns({ id: _col.id, dir: 1 });
+                    }
+                }
+            } else {
+                const _col = this.getColumn(_condition.attribute);
+                if (_col) {
+                    _condition.attribute = _col.id;
+                    addSortColumns({ id: _col.id, dir: 1 });
+                }
+            }
+            if (_condition.valueColumn) {
+                if (Array.isArray(_condition.valueColumn)) {
+                    for (let _i = 0; _i < _condition.valueColumn.length; _i++) {
+                        const _col = this.getColumn(_condition.valueColumn[_i]);
+                        if (_col) {
+                            _condition.valueColumn[_i] = _col.id;
+                        }
+                    }
+                } else {
+                    const _col = this.getColumn(_condition.valueColumn);
+                    if (_col) {
+                        _condition.valueColumn = _col.id;
+                    }
+                }
+            }
+        };
+        if (isQuery(query)) {
+            const _clause: Condition | Condition[] | Query[] = query.clause;
+            if (_clause) {
+                this.updateClause(_clause, sortColumns);
+                query._preSort = JSON.parse(JSON.stringify(sortColumns));
+            }
+        } else if (isCondition(query)) {
+            processCondition(query);
+        } else if (Array.isArray(query)) {
+            if (isConditionArray(query)) {
+                query.forEach((condition) => {
+                    if (isCondition(condition)) {
+                        processCondition(condition);
+                    }
+                });
+            } else if (isQueryArray(query)) {
+                query.forEach((_query) => {
+                    this.updateClause(_query, sortColumns);
+                    _query._preSort = JSON.parse(JSON.stringify(sortColumns));
+                });
+            }
+        }
     }
 }

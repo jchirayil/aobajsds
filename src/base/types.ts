@@ -46,3 +46,23 @@ export interface ViewOptions {
     includeRowId?: boolean;
     useAlias?: boolean;
 }
+
+export interface FilterOptions {
+    name?: string;
+    query: Condition | Query;
+    setActive?: boolean;
+    baseView?: string | number;
+}
+
+export interface Condition {
+    attribute: string | string[] | number | number[];
+    valueColumn?: string | string[] | number | number[];
+    value?: any | any[];
+    operator: 'eq' | 'ne' | 'lt' | 'le' | 'gt' | 'ge' | 'like' | 'in' | 'not in' | 'between' | 'not between';
+}
+
+export interface Query {
+    type: 'and' | 'or';
+    clause: Condition | Condition[] | Query[];
+    _preSort?: ColumnDefinition[];
+}

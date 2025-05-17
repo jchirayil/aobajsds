@@ -2,6 +2,7 @@
 import fs from 'fs';
 import pr from 'path';
 import JSZip from 'jszip';
+import { Query, Condition } from './types';
 
 /**
  * Calculates the CRC-32 checksum of a string.
@@ -103,4 +104,57 @@ async function readGZFile(fileName: string): Promise<any> {
 
     const fileContent = await zipFile.async('string'); // Extract the file content as a string
     return fileContent;
+}
+
+export function typeofClause(clause: Query | Query[] | Condition | Condition[]): string {
+    if (clause) {
+        if (Array.isArray(clause)) {
+            if (clause.length > 0) {
+                if (isQueryArray(clause)) {
+                    return 'queries';
+                } else if (isConditionArray(clause)) {
+                    return 'conditions';
+                }
+            }
+        } else if (isQuery(clause)) {
+            return 'query';
+        } else if (isCondition(clause)) {
+            return 'condition';
+        }
+    }
+    return 'Unknown';
+}
+
+export function isCondition(value: any): value is Condition {
+    const _isValueColumn =
+        value &&
+        value.valueColumn !== undefined &&
+        (typeof value.valueColumn === 'string' || Array.isArray(value.valueColumn));
+    const _isValue =
+        value && value.value !== undefined && (typeof value.value === 'string' || Array.isArray(value.value));
+    const _a: boolean =
+        value &&
+        (typeof value.attribute === 'string' || Array.isArray(value.attributes)) &&
+        (_isValueColumn || _isValue) &&
+        typeof value.operator === 'string';
+    return _a;
+}
+
+export function isConditionArray(value: any): value is Condition[] {
+    const _a: boolean = Array.isArray(value) && value.every(isCondition);
+    return _a;
+}
+
+export function isQuery(value: any): value is Query {
+    const _a: boolean =
+        value &&
+        typeof value.type === 'string' &&
+        (value.type === 'and' || value.type === 'or') &&
+        (Array.isArray(value.clause) || isCondition(value.clause));
+    return _a;
+}
+
+export function isQueryArray(value: any): value is Query[] {
+    const _a: boolean = Array.isArray(value) && value.every(isQuery);
+    return _a;
 }

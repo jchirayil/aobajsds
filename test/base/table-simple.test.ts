@@ -24,7 +24,7 @@ describe('Table', () => {
         expect(tbl.name).to.equal('table3');
     });
     it('should set name and data - intialize method - default view', () => {
-        
+
         (async () => {
             const tbl2 = new TableCore();
             await tbl2.intialize({
@@ -39,7 +39,7 @@ describe('Table', () => {
             expect(tbl2.view).to.equal('default');
             expect(_rows.length).to.equal(3);
         })();
-        
+
     });
     it('should set name and json file - intialize method', () => {
         const filePath = path.join(__dirname, '../data/car-road-tests.json');
@@ -63,7 +63,7 @@ describe('Table', () => {
 
     });
     it('get rows - _rowId & column alias', () => {
-        
+
         (async () => {
             const tbl2 = new TableCore();
             await tbl2.intialize({
@@ -73,12 +73,12 @@ describe('Table', () => {
                     { id: 3, name: 'Ruth Mayers', organization: 'Acme Inc' }
                 ]
             });
-            const _rows = tbl2.rows({name:'default', includeRowId: true, useAlias: true});
+            const _rows = tbl2.rows({ name: 'default', includeRowId: true, useAlias: true });
             expect(_rows.length).to.equal(3);
             expect(_rows[0].hasOwnProperty('_rowId')).to.equal(true);
             expect(_rows[0].hasOwnProperty('name')).to.equal(true);
         })();
-        
+
     });
     it('get columns', () => {
         (async () => {
@@ -120,7 +120,81 @@ describe('Table', () => {
                     { id: 3, name: 'Ver Mayers', organization: 'Acme Inc' }
                 ]
             });
-            const _sort = tbl2.sort({columns:'name'});
+            const _sort = tbl2.sort({ columns: 'name' });
+            expect(tbl2.views.length).to.equal(2);
+        })();
+    });
+    it('filter rows - one condition', () => {
+        (async () => {
+            const tbl2 = new TableCore();
+            await tbl2.intialize({
+                name: 'table1', rawData: [
+                    { id: 1, name: 'Zoe Smith', organization: 'Acme Inc' },
+                    { id: 2, name: 'Yarn Jane', organization: 'Acme Inc' },
+                    { id: 3, name: 'Ver Mayers', organization: 'Acme Inc' }
+                ]
+            });
+            const _filter = tbl2.filter({
+                name: 'filter1',
+                query: {
+                    type: 'and',
+                    clause: 
+                        { attribute: 'name', value: 'Zoe Smith', operator: 'eq' }
+                }
+            });
+            expect(tbl2.views.length).to.equal(2);
+        })();
+    });
+    it('filter rows - condition array', () => {
+        (async () => {
+            const tbl2 = new TableCore();
+            await tbl2.intialize({
+                name: 'table1', rawData: [
+                    { id: 1, name: 'Zoe Smith', organization: 'Acme Inc' },
+                    { id: 2, name: 'Yarn Jane', organization: 'Acme Inc' },
+                    { id: 3, name: 'Ver Mayers', organization: 'Acme Inc' }
+                ]
+            });
+            const _filter = tbl2.filter({
+                name: 'filter1',
+                query: {
+                    type: 'and',
+                    clause: [
+                        { attribute: 'name', value: 'Zoe Smith', operator: 'eq' },
+                        { attribute: 'organization', value: 'Acme Inc', operator: 'eq' }
+                    ]
+                }
+            });
+            expect(tbl2.views.length).to.equal(2);
+        })();
+    });
+        it('filter rows - query array', () => {
+        (async () => {
+            const tbl2 = new TableCore();
+            await tbl2.intialize({
+                name: 'table1', rawData: [
+                    { id: 1, name: 'Zoe Smith', organization: 'Acme Inc' },
+                    { id: 2, name: 'Yarn Jane', organization: 'Acme Inc' },
+                    { id: 3, name: 'Ver Mayers', organization: 'Acme Inc' }
+                ]
+            });
+            const _filter = tbl2.filter({
+                name: 'filter1',
+                query: {
+                    type: 'and',
+                    clause: 
+                        [{
+                    type: 'and',
+                    clause: 
+                        { attribute: 'name', value: 'Zoe Smith', operator: 'eq' }
+                },{
+                    type: 'or',
+                    clause: 
+                        [{ attribute: 'name', value: 'Yarn Jane', operator: 'eq' },
+                        { attribute: 'organization', value: 'Acme Inc', operator: 'eq' }]
+                }]
+                }
+            });
             expect(tbl2.views.length).to.equal(2);
         })();
     });
