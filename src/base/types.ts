@@ -49,20 +49,46 @@ export interface ViewOptions {
 
 export interface FilterOptions {
     name?: string;
-    query: Condition | Query;
+    query: ComparisonClause | LogicalClause;
+    sortColumns?: string[] | { [columnName: string]: 1 | -1 } | string | number;
     setActive?: boolean;
     baseView?: string | number;
 }
 
-export interface Condition {
-    attribute: string | string[] | number | number[];
-    valueColumn?: string | string[] | number | number[];
-    value?: any | any[];
-    operator: 'eq' | 'ne' | 'lt' | 'le' | 'gt' | 'ge' | 'like' | 'in' | 'not in' | 'between' | 'not between';
+export type ComparisonOperator =
+    | 'eq'
+    | '='
+    | 'neq'
+    | '!='
+    | 'gt'
+    | '>'
+    | 'gte'
+    | '>='
+    | 'lt'
+    | '<'
+    | 'lte'
+    | '<='
+    | 'like' // LIKE
+    | 'notLike' // NOT LIKE
+    | 'in' // IN
+    | 'notIn' // NOT IN
+    | 'between' // BETWEEN
+    | 'notBetween' // NOT BETWEEN
+    | 'isNull' // IS NULL
+    | 'isNotNull'; // IS NOT NULL;
+
+export type LogicalOperator = 'and' | 'or' | 'not';
+
+export interface ComparisonClause {
+    attribute: string | number;
+    operator: ComparisonOperator;
+    value?: any;
+    valueColumn?: string | string[] | number | number[] | null;
+    _preSort?: ColumnDefinition[];
 }
 
-export interface Query {
-    type: 'and' | 'or';
-    clause: Condition | Condition[] | Query[];
+export interface LogicalClause {
+    type: LogicalOperator;
+    clauses: (ComparisonClause | LogicalClause)[];
     _preSort?: ColumnDefinition[];
 }

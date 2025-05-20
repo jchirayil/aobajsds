@@ -136,11 +136,7 @@ describe('Table', () => {
             });
             const _filter = tbl2.filter({
                 name: 'filter1',
-                query: {
-                    type: 'and',
-                    clause: 
-                        { attribute: 'name', value: 'Zoe Smith', operator: 'eq' }
-                }
+                query: { attribute: 'name', value: 'Yarn Jane', operator: 'eq' }
             });
             expect(tbl2.views.length).to.equal(2);
         })();
@@ -158,17 +154,17 @@ describe('Table', () => {
             const _filter = tbl2.filter({
                 name: 'filter1',
                 query: {
-                    type: 'and',
-                    clause: [
-                        { attribute: 'name', value: 'Zoe Smith', operator: 'eq' },
-                        { attribute: 'organization', value: 'Acme Inc', operator: 'eq' }
+                    type: 'or',
+                    clauses: [
+                        { attribute: 'name', value: 'Ver Mayers', operator: 'eq' },
+                        { attribute: 'name', value: 'Zoe Smith', operator: 'eq' }
                     ]
                 }
             });
             expect(tbl2.views.length).to.equal(2);
         })();
     });
-        it('filter rows - query array', () => {
+    it('filter rows - query array', () => {
         (async () => {
             const tbl2 = new TableCore();
             await tbl2.intialize({
@@ -182,17 +178,15 @@ describe('Table', () => {
                 name: 'filter1',
                 query: {
                     type: 'and',
-                    clause: 
-                        [{
-                    type: 'and',
-                    clause: 
-                        { attribute: 'name', value: 'Zoe Smith', operator: 'eq' }
-                },{
-                    type: 'or',
-                    clause: 
-                        [{ attribute: 'name', value: 'Yarn Jane', operator: 'eq' },
-                        { attribute: 'organization', value: 'Acme Inc', operator: 'eq' }]
-                }]
+                    clauses:
+                        [
+                            { attribute: 'organization', value: 'Acme Inc', operator: 'eq' }
+                            , {
+                                type: 'or',
+                                clauses:
+                                    [{ attribute: 'name', value: 'Zoe Smith', operator: 'eq' },
+                                    { attribute: 'id', value: 1, operator: 'gt' }]
+                            }]
                 }
             });
             expect(tbl2.views.length).to.equal(2);

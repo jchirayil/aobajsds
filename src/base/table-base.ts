@@ -7,10 +7,11 @@ import {
     TableData,
     SortOptions,
     FilterOptions,
-    Condition,
-    Query,
+    ComparisonClause,
+    LogicalClause,
 } from './types';
-import { crc, isCondition, isConditionArray, isQuery, isQueryArray, typeofClause } from './utils';
+import { crc } from './shared-general';
+import { normalizeOperator } from './shared-data';
 
 export abstract class TableBase {
     protected _name: string = 'table1';
@@ -245,38 +246,51 @@ export abstract class TableBase {
     protected filterData(
         options: FilterOptions = {
             name: 'filter1',
-            query: { attribute: '', value: '', operator: 'eq' } as Condition,
+            query: { attribute: '', value: '', operator: 'eq' } as ComparisonClause,
             setActive: true,
+            baseView: 'default',
         }
     ): string | number {
         const _clause = JSON.parse(JSON.stringify(options.query));
         this.updateClause(_clause);
         const _pid = crc(JSON.stringify(_clause));
         const _filterViewName = options.name || _pid;
-
-        console.log('updateClause:', JSON.stringify(_clause));
-        console.log('pid:', _pid);
-        //const _filterView = this.getView(_filterViewName);
-
-        /*
+        const _filterView = this.getView(_filterViewName);
         if (_filterView === null) {
+            const _baseViewName = options.baseView || this._activeViewName || 'default';
+            const _baseView = this.getView(_baseViewName);
+            console.log('Filter - Base view rows: ', _baseView?.rows);
+            const _doPreSort: boolean = ('_preSort' in _clause && Array.isArray(_clause._preSort)) || false;
+            let _baseRowIds: number[] = _baseView?.rows || [];
+            if (_doPreSort) {
+                _baseRowIds = this.sortRows(_clause._preSort, _baseViewName);
+            }
+            const _filterRowIds: number[] = [];
+            _baseRowIds.forEach((rowId) => {
+                if (this.evaluateClause(this._data[rowId], _clause)) {
+                    _filterRowIds.push(rowId);
+                }
+            });
+
             this._views[_filterViewName] = {
                 pid: _pid,
                 type: 'filter',
-                baseView: options.baseView || this._activeViewName || 'default',
-                clause: options.clause,
-                rows: this.filterRows(options.clause, options.baseView || this._activeViewName || 'default'),
+                baseView: _baseViewName,
+                clause: JSON.stringify(_clause),
+                rows: _filterRowIds.sort(),
             };
             this._views._ids[_pid] = _filterViewName;
+            if (options.sortColumns) {
+                const _sortColumns = this.getSortColumns(options.sortColumns);
+                this._views[_filterViewName].rows = this.sortRows(_sortColumns, _filterViewName);
+            }
+            console.log('Filter - Filter view rows: ', this._views[_filterViewName].rows);
         }
         if (options.setActive) {
             this._activeViewName = _filterViewName;
         }
-        */
         return _filterViewName;
     }
-
-    private filterRows() {}
 
     protected getView(nameOrId: string | number): View | null {
         let _view = null;
@@ -356,65 +370,86 @@ export abstract class TableBase {
         return (v1 < v2 ? -1 : v1 > v2 ? 1 : 0) * dir;
     }
 
-    private updateClause(query: Query[] | Query | Condition | Condition[], sortColumns: ColumnDefinition[] = []) {
-        const addSortColumns = (column: ColumnDefinition) => {
+    private updateClause(clause: LogicalClause | ComparisonClause) {
+        const sortColumns: ColumnDefinition[] = [];
+        const addSortColumns = (column: ColumnDefinition): void => {
             if (!sortColumns.some((col) => col.id === column.id)) {
                 sortColumns.push(column);
             }
         };
-        const processCondition = (_condition: Condition) => {
-            if (Array.isArray(_condition.attribute)) {
-                for (let _i = 0; _i < _condition.attribute.length; _i++) {
-                    const _col = this.getColumn(_condition.attribute[_i]);
-                    if (_col) {
-                        _condition.attribute[_i] = _col.id;
-                        addSortColumns({ id: _col.id, dir: 1 });
-                    }
-                }
-            } else {
-                const _col = this.getColumn(_condition.attribute);
+        const traverse = (current: ComparisonClause | LogicalClause): void => {
+            if ('attribute' in current && typeof current.attribute === 'string') {
+                const _col = this.getColumn(current.attribute);
                 if (_col) {
-                    _condition.attribute = _col.id;
+                    current.attribute = _col.id;
                     addSortColumns({ id: _col.id, dir: 1 });
                 }
-            }
-            if (_condition.valueColumn) {
-                if (Array.isArray(_condition.valueColumn)) {
-                    for (let _i = 0; _i < _condition.valueColumn.length; _i++) {
-                        const _col = this.getColumn(_condition.valueColumn[_i]);
-                        if (_col) {
-                            _condition.valueColumn[_i] = _col.id;
-                        }
-                    }
-                } else {
-                    const _col = this.getColumn(_condition.valueColumn);
-                    if (_col) {
-                        _condition.valueColumn = _col.id;
-                    }
+            } else if ('clauses' in current && Array.isArray(current.clauses)) {
+                for (const subClause of current.clauses) {
+                    traverse(subClause);
                 }
             }
         };
-        if (isQuery(query)) {
-            const _clause: Condition | Condition[] | Query[] = query.clause;
-            if (_clause) {
-                this.updateClause(_clause, sortColumns);
-                query._preSort = JSON.parse(JSON.stringify(sortColumns));
-            }
-        } else if (isCondition(query)) {
-            processCondition(query);
-        } else if (Array.isArray(query)) {
-            if (isConditionArray(query)) {
-                query.forEach((condition) => {
-                    if (isCondition(condition)) {
-                        processCondition(condition);
-                    }
-                });
-            } else if (isQueryArray(query)) {
-                query.forEach((_query) => {
-                    this.updateClause(_query, sortColumns);
-                    _query._preSort = JSON.parse(JSON.stringify(sortColumns));
-                });
+        traverse(clause);
+        clause._preSort = JSON.parse(JSON.stringify(sortColumns));
+    }
+
+    private evaluateComparison(item: any, clause: ComparisonClause): boolean {
+        const attrValue = item[clause.attribute];
+        const operator = normalizeOperator(clause.operator);
+        const value = clause.value;
+
+        switch (operator) {
+            case 'eq':
+                return attrValue === value;
+            case 'neq':
+                return attrValue !== value;
+            case 'gt':
+                return attrValue > value;
+            case 'gte':
+                return attrValue >= value;
+            case 'lt':
+                return attrValue < value;
+            case 'lte':
+                return attrValue <= value;
+            case 'like':
+                return typeof attrValue === 'string' && typeof value === 'string' && attrValue.includes(value);
+            case 'notLike':
+                return typeof attrValue === 'string' && typeof value === 'string' && !attrValue.includes(value);
+            case 'in':
+                return Array.isArray(value) && value.includes(attrValue);
+            case 'notIn':
+                return Array.isArray(value) && !value.includes(attrValue);
+            case 'between':
+                return Array.isArray(value) && value.length === 2 && attrValue >= value[0] && attrValue <= value[1];
+            case 'notBetween':
+                return Array.isArray(value) && value.length === 2 && (attrValue < value[0] || attrValue > value[1]);
+            case 'isNull':
+                return attrValue === null || attrValue === undefined;
+            case 'isNotNull':
+                return attrValue !== null && attrValue !== undefined;
+            default:
+                return false;
+        }
+    }
+
+    private evaluateClause(item: any, clause: LogicalClause | ComparisonClause): boolean {
+        if ('attribute' in clause) {
+            return this.evaluateComparison(item, clause);
+        } else {
+            const { type, clauses } = clause;
+            switch (type) {
+                case 'and':
+                    return clauses.every((sub) => this.evaluateClause(item, sub));
+                case 'or':
+                    return clauses.some((sub) => this.evaluateClause(item, sub));
+                case 'not':
+                    return !clauses.some((sub) => this.evaluateClause(item, sub));
             }
         }
+    }
+
+    private filterData1(data: any[], clause: LogicalClause): any[] {
+        return data.filter((item) => this.evaluateClause(item, clause));
     }
 }

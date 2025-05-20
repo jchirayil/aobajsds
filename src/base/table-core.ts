@@ -1,7 +1,7 @@
 //src/base/table-core.ts
-import { readJSON } from './utils';
+import { readJSON } from './shared-file';
 import { TableBase } from './table-base';
-import { TableOptions, ViewOptions, ColumnDefinition, SortOptions, FilterOptions, Condition } from './types';
+import { TableOptions, ViewOptions, ColumnDefinition, SortOptions, FilterOptions, ComparisonClause } from './types';
 
 export class TableCore extends TableBase {
     constructor() {
@@ -40,7 +40,7 @@ export class TableCore extends TableBase {
 
     filter(
         options: FilterOptions = {
-            query: { attribute: '', value: '', operator: 'eq' } as Condition,
+            query: { attribute: '', value: '', operator: 'eq' } as ComparisonClause,
             setActive: true,
         }
     ): string | number {
