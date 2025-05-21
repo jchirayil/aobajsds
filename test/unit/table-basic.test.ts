@@ -1,4 +1,4 @@
-// test/base/table-simple.test.ts
+// test/base/table-basic.test.ts
 import { expect } from 'chai';
 import path from 'path';
 import { TableCore } from '../../src/base/table-core';
@@ -15,7 +15,7 @@ describe('Table', () => {
     it('should set name - intialize method', () => {
         const tbl2 = new TableCore();
         (async () => {
-            await tbl2.intialize({ name: 'table2' })
+            await tbl2.initialize({ name: 'table2' })
         })();
         expect(tbl2.name).to.equal('table2');
     });
@@ -27,7 +27,7 @@ describe('Table', () => {
 
         (async () => {
             const tbl2 = new TableCore();
-            await tbl2.intialize({
+            await tbl2.initialize({
                 name: 'table1', rawData: [
                     { id: 1, name: 'John Smith', organization: 'Acme Inc' },
                     { id: 2, name: 'Mary Jane', organization: 'Acme Inc' },
@@ -45,20 +45,20 @@ describe('Table', () => {
         const filePath = path.join(__dirname, '../data/car-road-tests.json');
         (async () => {
             const tbl2 = new TableCore();
-            await tbl2.intialize({
+            await tbl2.initialize({
                 name: 'table1', fileName: filePath
             });
-            expect(tbl2.columns.length).to.equal(12);
+            expect(tbl2.columns().length).to.equal(12);
         })();
     });
     it('should set name and compressed json file (.gz) - initialize method', () => {
         const filePath = path.join(__dirname, '../data/house-prices.json.gz');
         (async () => {
             const tbl2 = new TableCore();
-            await tbl2.intialize({
+            await tbl2.initialize({
                 name: 'table1', fileName: filePath
             });
-            expect(tbl2.columns.length).to.equal(13);
+            expect(tbl2.columns().length).to.equal(13);
         })();
 
     });
@@ -66,7 +66,7 @@ describe('Table', () => {
 
         (async () => {
             const tbl2 = new TableCore();
-            await tbl2.intialize({
+            await tbl2.initialize({
                 name: 'table1', rawData: [
                     { id: 1, name: 'John Smith', organization: 'Acme Inc' },
                     { id: 2, name: 'Mary Jane', organization: 'Acme Inc' },
@@ -83,7 +83,7 @@ describe('Table', () => {
     it('get columns', () => {
         (async () => {
             const tbl2 = new TableCore();
-            await tbl2.intialize({
+            await tbl2.initialize({
                 name: 'table1', rawData: [
                     { id: 1, name: 'John Smith', organization: 'Acme Inc' },
                     { id: 2, name: 'Mary Jane', organization: 'Acme Inc' },
@@ -98,7 +98,7 @@ describe('Table', () => {
     it('get views', () => {
         (async () => {
             const tbl2 = new TableCore();
-            await tbl2.intialize({
+            await tbl2.initialize({
                 name: 'table1', rawData: [
                     { id: 1, name: 'John Smith', organization: 'Acme Inc' },
                     { id: 2, name: 'Mary Jane', organization: 'Acme Inc' },
@@ -113,21 +113,21 @@ describe('Table', () => {
     it('sort rows', () => {
         (async () => {
             const tbl2 = new TableCore();
-            await tbl2.intialize({
+            await tbl2.initialize({
                 name: 'table1', rawData: [
                     { id: 1, name: 'Zoe Smith', organization: 'Acme Inc' },
                     { id: 2, name: 'Yarn Jane', organization: 'Acme Inc' },
                     { id: 3, name: 'Ver Mayers', organization: 'Acme Inc' }
                 ]
             });
-            const _sort = tbl2.sort({ columns: 'name' });
+            const _sort = tbl2.sort({ sortColumns: 'name' });
             expect(tbl2.views.length).to.equal(2);
         })();
     });
     it('filter rows - one condition', () => {
         (async () => {
             const tbl2 = new TableCore();
-            await tbl2.intialize({
+            await tbl2.initialize({
                 name: 'table1', rawData: [
                     { id: 1, name: 'Zoe Smith', organization: 'Acme Inc' },
                     { id: 2, name: 'Yarn Jane', organization: 'Acme Inc' },
@@ -144,11 +144,14 @@ describe('Table', () => {
     it('filter rows - condition array', () => {
         (async () => {
             const tbl2 = new TableCore();
-            await tbl2.intialize({
+            await tbl2.initialize({
                 name: 'table1', rawData: [
                     { id: 1, name: 'Zoe Smith', organization: 'Acme Inc' },
                     { id: 2, name: 'Yarn Jane', organization: 'Acme Inc' },
-                    { id: 3, name: 'Ver Mayers', organization: 'Acme Inc' }
+                    { id: 3, name: 'Ver Mayers', organization: 'Acme Inc' },
+                    { id: 4, name: 'Adam Motts', organization: 'Acme Plc' },
+                    { id: 5, name: 'Beatty Brooks', organization: 'Acme Plc' },
+                    { id: 6, name: 'Ver Mayers', organization: 'Acme Plc' }
                 ]
             });
             const _filter = tbl2.filter({
@@ -167,11 +170,14 @@ describe('Table', () => {
     it('filter rows - query array', () => {
         (async () => {
             const tbl2 = new TableCore();
-            await tbl2.intialize({
+            await tbl2.initialize({
                 name: 'table1', rawData: [
                     { id: 1, name: 'Zoe Smith', organization: 'Acme Inc' },
                     { id: 2, name: 'Yarn Jane', organization: 'Acme Inc' },
-                    { id: 3, name: 'Ver Mayers', organization: 'Acme Inc' }
+                    { id: 3, name: 'Ver Mayers', organization: 'Acme Inc' },
+                    { id: 4, name: 'Adam Motts', organization: 'Acme Plc' },
+                    { id: 5, name: 'Beatty Brooks', organization: 'Acme Plc' },
+                    { id: 6, name: 'Ver Mayers', organization: 'Acme Plc' }
                 ]
             });
             const _filter = tbl2.filter({
@@ -180,12 +186,12 @@ describe('Table', () => {
                     type: 'and',
                     clauses:
                         [
-                            { attribute: 'organization', value: 'Acme Inc', operator: 'eq' }
+                            { attribute: 'id', value: 5, operator: 'lt' }
                             , {
                                 type: 'or',
                                 clauses:
-                                    [{ attribute: 'name', value: 'Zoe Smith', operator: 'eq' },
-                                    { attribute: 'id', value: 1, operator: 'gt' }]
+                                    [{ attribute: 'name', value: 'Ver Mayers', operator: 'eq' },
+                                    { attribute: 'organization', value: 'Acme Plc', operator: 'eq' }]
                             }]
                 }
             });

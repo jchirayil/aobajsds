@@ -58,6 +58,27 @@ export abstract class TableBase {
         return { ...this._views };
     }
 
+    createView(options: ViewOptions = { name: 'view1' }): string | number {
+        let _viewName = options.name || 'view1';
+        let _view = this.getView(_viewName);
+        if (_view === null) {
+            _viewName = '';
+            // Check options has all attributes for Filter
+            if (options.query) {
+                _viewName = this.filterData(options as FilterOptions);
+            } else if (options.sortColumns) {
+                _viewName = this.sortData(options as SortOptions);
+            }
+            if (_viewName != '') {
+                _view = this.getView(_viewName);
+                if (_view) {
+                    _view.type = 'view';
+                }
+            }
+        }
+        return _viewName;
+    }
+
     parseData(data: any[]): void {
         if (Array.isArray(data)) {
             // rows in array
@@ -201,8 +222,8 @@ export abstract class TableBase {
         return null;
     }
 
-    protected sortData(options: SortOptions = { columns: [], setActive: true }): string | number {
-        const _sortColumns = this.getSortColumns(options.columns || []);
+    protected sortData(options: SortOptions = { sortColumns: [], setActive: true }): string | number {
+        const _sortColumns = this.getSortColumns(options.sortColumns || []);
         const _pid = crc(JSON.stringify(_sortColumns));
         const _sortViewName = options.name || _pid;
         const _sortView = this.getView(_sortViewName);
@@ -259,7 +280,6 @@ export abstract class TableBase {
         if (_filterView === null) {
             const _baseViewName = options.baseView || this._activeViewName || 'default';
             const _baseView = this.getView(_baseViewName);
-            console.log('Filter - Base view rows: ', _baseView?.rows);
             const _doPreSort: boolean = ('_preSort' in _clause && Array.isArray(_clause._preSort)) || false;
             let _baseRowIds: number[] = _baseView?.rows || [];
             if (_doPreSort) {
@@ -284,7 +304,6 @@ export abstract class TableBase {
                 const _sortColumns = this.getSortColumns(options.sortColumns);
                 this._views[_filterViewName].rows = this.sortRows(_sortColumns, _filterViewName);
             }
-            console.log('Filter - Filter view rows: ', this._views[_filterViewName].rows);
         }
         if (options.setActive) {
             this._activeViewName = _filterViewName;
@@ -323,7 +342,9 @@ export abstract class TableBase {
         );
     }
 
-    private getSortColumns(columns: string[] | { [columnName: string]: 1 | -1 } | string | number): ColumnDefinition[] {
+    private getSortColumns(
+        columns: (string | { [columnName: string]: 1 | -1 })[] | string | number
+    ): ColumnDefinition[] {
         const sortCols: ColumnDefinition[] = [];
         const processColumn = (col: string | number, dir: 1 | -1 = 1) => {
             const def = this.getColumn(col);
@@ -348,10 +369,15 @@ export abstract class TableBase {
                     }
                 }
             });
-        } else if (typeof columns === 'object' && columns !== null) {
-            for (const columnName in columns) {
+        } else if (
+            typeof columns === 'object' &&
+            columns !== null &&
+            !Array.isArray(columns) &&
+            Object.prototype.toString.call(columns) === '[object Object]'
+        ) {
+            for (const columnName in columns as Record<string, any>) {
                 if (Object.prototype.hasOwnProperty.call(columns, columnName)) {
-                    const dir = columns[columnName];
+                    const dir = (columns as Record<string, any>)[columnName];
                     if (dir === 1 || dir === -1) {
                         processColumn(columnName, dir);
                     } else {
@@ -447,9 +473,5 @@ export abstract class TableBase {
                     return !clauses.some((sub) => this.evaluateClause(item, sub));
             }
         }
-    }
-
-    private filterData1(data: any[], clause: LogicalClause): any[] {
-        return data.filter((item) => this.evaluateClause(item, clause));
     }
 }

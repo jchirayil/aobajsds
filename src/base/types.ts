@@ -1,4 +1,5 @@
 export interface ColumnDefinition {
+    [x: string]: any;
     id: number;
     alias?: string;
     dir?: 1 | -1;
@@ -6,7 +7,7 @@ export interface ColumnDefinition {
 
 export interface View {
     pid: string | number; // Changed to string for consistency with CRC
-    type: 'default' | 'sort' | 'filter';
+    type: 'default' | 'sort' | 'filter' | 'view';
     baseView?: string | number;
     clause?: string;
     rows: number[];
@@ -33,26 +34,28 @@ export interface TableOptions {
     rawData?: any;
 }
 
-export interface SortOptions {
-    name?: string;
-    columns: string[] | { [columnName: string]: 1 | -1 } | string | number;
+//Common properties for Sort, View and Filter options
+export type SortColumnType = (string | { [columnName: string]: 1 | -1 })[] | string | number;
+interface CommonOptions {
+    name?: string | number;
     setActive?: boolean;
     baseView?: string | number;
+    sortColumns?: SortColumnType;
 }
 
-export interface ViewOptions {
-    name?: string | number;
+export interface SortOptions extends CommonOptions {
+    sortColumns: SortColumnType;
+}
+
+export interface ViewOptions extends CommonOptions {
     columns?: ColumnDefinition[] | string[] | string | number[] | number | null;
     includeRowId?: boolean;
     useAlias?: boolean;
+    query?: ComparisonClause | LogicalClause;
 }
 
-export interface FilterOptions {
-    name?: string;
+export interface FilterOptions extends CommonOptions {
     query: ComparisonClause | LogicalClause;
-    sortColumns?: string[] | { [columnName: string]: 1 | -1 } | string | number;
-    setActive?: boolean;
-    baseView?: string | number;
 }
 
 export type ComparisonOperator =

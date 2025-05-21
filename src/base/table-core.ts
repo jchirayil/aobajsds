@@ -8,18 +8,15 @@ export class TableCore extends TableBase {
         super();
     }
 
-    async intialize(options: TableOptions = {}): Promise<void> {
+    async initialize(options: TableOptions = {}): Promise<void> {
         this.clear();
         if (options.name) {
-            this._name = options.name;
+            this._name = options.name || 'table1';
         }
         if (options.fileName) {
-            (async () => {
-                if (options.fileName) {
-                    const data = await readJSON(options.fileName);
-                    this.parseData(data);
-                }
-            })();
+            const data = await readJSON(options.fileName);
+            this.parseData(data);
+            //console.log('data length:', data.length, 'views:', this._views['default'].rows);
         } else if (options.rawData) {
             this.parseData(options.rawData);
         }
@@ -34,7 +31,7 @@ export class TableCore extends TableBase {
         return this.getRows(options);
     }
 
-    sort(options: SortOptions = { columns: [], setActive: true }): string | number {
+    sort(options: SortOptions = { sortColumns: [], setActive: true }): string | number {
         return this.sortData(options);
     }
 
